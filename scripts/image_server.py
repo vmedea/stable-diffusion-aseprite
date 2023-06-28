@@ -15,6 +15,7 @@ from typing import Optional
 # Import built libraries
 from ldm.util import instantiate_from_config
 from optimUtils import split_weighted_subprompts
+from pixelvae import load_pixelvae_model
 
 # Import PyTorch functions
 from torch import autocast
@@ -895,9 +896,25 @@ def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                         sampler = sampler,
                     )
 
-                    modelFS.to(device)
+                    skip_downscale = False
+                    if pixel == "true":
+                        print('Debug: running pixelvae model')
+                        vmodel = load_pixelvae_model("decoder_rd.multibin.hsv444.pt", device)
+                        # Plain mode (no postprocessing)
+                        #x_sample = vmodel.run_plain(samples_ddim)
+                        # Fixed palette mode
+                        #x_sample = vmodel.run_paletted(samples_ddim, [224, 248, 208, 136, 192, 112, 52, 104, 86, 8, 24, 32])
+                        # Pixel clustering mode, lower threshold means bigger clusters
+                        x_sample = vmodel.run_cluster(samples_ddim, threshold=0.001)
 
-                    if cheap_decode == False:
+                        # Convert to numpy format, skip downscale later
+                        x_sample = x_sample[0].cpu().numpy()
+                        skip_downscale = True
+
+                        # free up VRAM
+                        del vmodel
+                    elif cheap_decode == False:
+                        modelFS.to(device)
                         # Decode the samples using the first stage of the model
                         x_sample = [modelFS.decode_first_stage(samples_ddim[i:i+1].to(device))[0].cpu() for i in range(samples_ddim.size(0))]
                         # Convert the list of decoded samples to a tensor and normalize the values to [0, 1]
@@ -932,7 +949,7 @@ def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                     file_name = "temp"
                     if n_iter > 1:
                         file_name = "temp" + f"{base_count}"
-                    if pixel == "true":
+                    if pixel == "true" and not skip_downscale:
                         # Resize the image if pixel is true
                         x_sample_image = kCentroid(x_sample_image, int(W/8), int(H/8), 2)
                     x_sample_image.save(
@@ -943,7 +960,7 @@ def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                     base_count += 1
 
                     # Move modelFS to CPU if necessary to free up GPU memory
-                    if device != "cpu":
+                    if device != "cpu" and modelFS.device != torch.device("cpu"):
                         mem = torch.cuda.memory_allocated() / 1e6
                         modelFS.to("cpu")
                         # Wait until memory usage decreases
