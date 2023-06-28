@@ -37,7 +37,7 @@ import hitherdither
 from rembg import remove
 
 # Import console management libraries
-import pygetwindow as gw
+#import pygetwindow as gw
 from rich import print as rprint
 from colorama import just_fix_windows_console
 
@@ -45,8 +45,8 @@ from colorama import just_fix_windows_console
 just_fix_windows_console()
 
 # Patch existing console to remove interactivity
-kernel32 = ctypes.windll.kernel32
-kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), 128)
+#kernel32 = ctypes.windll.kernel32
+#kernel32.SetConsoleMode(kernel32.GetStdHandle(-10), 128)
 
 log = pylog.getLogger("pytorch_lightning")
 log.propagate = False
@@ -1267,7 +1267,7 @@ async def connectSend(uri, message):
         # Send a message over the WebSocket connection
         await websocket.send(message)
 
-os.system("title Retro Diffusion Image Generator")
+#os.system("title Retro Diffusion Image Generator")
 
 rprint("\n" + climage("logo.png", "centered") + "\n\n")
 
