@@ -174,7 +174,7 @@ class PixelVAE:
         result = net_output_to_color8_pal(self.binning, predicts, palette)
         return result
 
-    def run_cluster(self, samples, threshold=0.001, rand_seed=1, select='local8'):
+    def run_cluster(self, samples, threshold=0.001, rand_seed=1, select='local8', wrap_x=False, wrap_y=False):
         import random
         import numpy as np
         predicts = self.model.forward(samples.to(self.device))
@@ -213,7 +213,20 @@ class PixelVAE:
                 for (xi, yi) in neighbourhood:
                     xp, yp = x + xi, y + yi
                     if xp < 0 or yp < 0 or xp >= width or yp >= height:
-                        continue
+                        # handle wrap-around boundary conditions, if requested
+                        if wrap_x:
+                            if xp < 0:
+                                xp += width
+                            elif xp >= width:
+                                xp -= width
+                        if wrap_y:
+                            if yp < 0:
+                                yp += height
+                            elif yp >= height:
+                                yp -= height
+                        # if still out of bounds, skip pixel
+                        if xp < 0 or yp < 0 or xp >= width or yp >= height:
+                            continue
                     hsub, ssub, vsub = bins[0][hh,yp,xp], bins[1][ss,yp,xp], bins[2][vv,yp,xp]
 
                     if not visited[yp, xp] and hsub * ssub * vsub >= pixel_threshold[yp,xp]:

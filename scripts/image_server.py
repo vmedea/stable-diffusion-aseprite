@@ -905,7 +905,8 @@ def txt2img(pixel, device, precision, prompt, negative, W, H, ddim_steps, scale,
                         # Fixed palette mode
                         #x_sample = vmodel.run_paletted(samples_ddim, [224, 248, 208, 136, 192, 112, 52, 104, 86, 8, 24, 32])
                         # Pixel clustering mode, lower threshold means bigger clusters
-                        x_sample = vmodel.run_cluster(samples_ddim, threshold=0.001)
+                        x_sample = vmodel.run_cluster(samples_ddim, threshold=0.001,
+                            wrap_x=bool(tilingX == "true"), wrap_y=bool(tilingY == "true"))
 
                         # Convert to numpy format, skip downscale later
                         x_sample = x_sample[0].cpu().numpy()
